@@ -4,10 +4,14 @@ import numpy as np
 import random
 import json
 from urllib.request import urlopen
-
+from requests import get, post, HTTPError
+import http.client
+from requests_oauthlib import OAuth1
 def getplace(lat, lon):
-    url = "http://maps.googleapis.com/maps/api/geocode/json?"
-    url += "latlng=%s,%s&sensor=false" % (lat, lon)
+    url = "https://revgeocode.search.hereapi.com/v1/revgeocode?"
+    url += "at=%s,%s&lang=en-US" % (lat, lon)
+
+
     v = urlopen(url).read()
     j = json.loads(v)
     components = j['results'][0]['address_components']
@@ -19,6 +23,40 @@ def getplace(lat, lon):
             town = c['long_name']
     return town, country
 
+def getplacehere(lat, lon):
+    url = "https://revgeocode.search.hereapi.com/v1/revgeocode?"
+    url += "at=%s,%s&lang=en-US" % (lat, lon)
+
+    clientId = "_D6emiCPSlTUF4em-90Bcw"
+    clientSecret = "Mc6o_3iosEwN9cxDVIOzRk0d2q4cucFL7ocarIjyGnQ9ddRxhWcIMFk6al3pO78NYSsgO7DjycZ6_I_-9pB8qg"
+    data = {
+        'grantType': 'client_credentials',
+        'clientId': clientId,
+        'clientSecret': clientSecret
+        }
+
+    response = post(
+        url='https://account.api.here.com/oauth2/token',
+        auth=OAuth1(clientId, client_secret=clientSecret) ,
+        headers={'Content-type': 'application/json'},
+        data=json.dumps(data)).json()
+
+    token, token_type, expire_in = None, None, None
+    try:
+        token = response['accessToken']
+        token_type = response['tokenType']
+        expire_in = response['expiresIn']
+    except KeyError as e:
+        print(json.dumps(response, indent=2))
+        exit(1)
+
+    headers = {'Authorization': f'{token_type} {token}'}
+    search_results = json.dumps(get(url, headers=headers).json(), indent=2)
+    print(f'results:\n{search_results}')
+    json_result = json.loads(search_results)
+
+    state, country = json_result['items'][0]['address']['state'], json_result['items'][0]['address']['countryName']
+    return state, country
 def transform_age(s):
     age_str = str(s)
 
