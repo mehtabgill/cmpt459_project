@@ -23,6 +23,10 @@ def getplace(lat, lon):
             town = c['long_name']
     return town, country
 
+
+def get_province(row):
+    return getplacehere(row['latitude'], row['longitude'])[0]
+
 def getplacehere(lat, lon):
     url = "https://revgeocode.search.hereapi.com/v1/revgeocode?"
     url += "at=%s,%s&lang=en-US" % (lat, lon)
