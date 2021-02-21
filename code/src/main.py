@@ -3,6 +3,7 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 import seaborn as sns
+from helper1 import *
 
 def plot_bargraph(title, x_label, y_label, x_attribute, y_attribute):
     plt.subplots(figsize=(19, 10))
@@ -184,7 +185,117 @@ def outlier_detection_elimination():
         temp_df = temp_df.loc[(temp_df[column] < 0.0) | (temp_df[column] > upper_bound)]
         temp_df.to_csv('../data/outliers/'+column+'.csv')
         print('------ Outliers saved to ---->  ./code/data/outliers/')
-    
+
+def preprocess():
+
+    # readdata
+    train_data = pd.read_csv('../data/cases_train.csv')
+    location_data = pd.read_csv('../data/location.csv')
+    test_data = pd.read_csv('../data/cases_test.csv')
+
+
+    # =========== 1.2 Data Cleanning =======
+    # rename the location data columns
+    location_data.rename({'Country_Region': 'country', 'Province_State': 'province'}, axis=1, inplace=True)
+
+    # refactor age columns
+    train_data['age'] = train_data['age'].apply(lambda x: transform_age(x) if np.all(pd.notnull(x)) else x)
+    test_data['age'] = test_data['age'].apply(lambda x: transform_age(x) if np.all(pd.notnull(x)) else x)
+    # drop some columns
+    DROP_COLUMNS = ['additional_information', 'source']
+    train_data.drop(DROP_COLUMNS, axis=1, inplace=True)
+    test_data.drop(DROP_COLUMNS, axis=1, inplace=True)
+
+    AVERAGE_COLUMNS = ['age']
+    for column in AVERAGE_COLUMNS:
+        mean_val_train = train_data[column].mean()
+        mean_val_test = test_data[column].mean()
+        train_data[column].fillna(mean_val_train, inplace=True)
+        test_data[column].fillna(mean_val_test, inplace=True)
+
+    # fill sex columns using a random value
+    train_data['sex'] = train_data['sex'].apply(lambda x: x if np.all(pd.notnull(x)) else generate_sex())
+    test_data['sex'] = test_data['sex'].apply(lambda x: x if np.all(pd.notnull(x)) else generate_sex())
+
+    # transform `date_confirmation` to month representation
+    train_data['date_confirmation'] = train_data['date_confirmation'].apply(
+        lambda x: transform_datetime(x) if np.all(pd.notnull(x)) else x)
+    train_data['date_confirmation'] = pd.DatetimeIndex(train_data['date_confirmation']).month
+
+    test_data['date_confirmation'] = test_data['date_confirmation'].apply(
+        lambda x: transform_datetime(x) if np.all(pd.notnull(x)) else x)
+    test_data['date_confirmation'] = pd.DatetimeIndex(test_data['date_confirmation']).month
+
+    # drop row with NA value in certain columns
+    DROPNA_COLUMNS = ['date_confirmation', 'country']
+    train_data.dropna(subset=DROPNA_COLUMNS, inplace=True)
+    test_data.dropna(subset=DROPNA_COLUMNS, inplace=True)
+
+    # finally cast type to int
+    train_data = train_data.astype({"age": int, "date_confirmation": int})
+    test_data = test_data.astype({"age": int, "date_confirmation": int})
+
+    # set the province
+
+    train_data['province'] = train_data.apply(
+        lambda row: get_province(row) if pd.isnull(row['province']) else row['province'], axis=1)
+    train_data.isnull().sum().sort_values(ascending=False)
+    # see all the missing values
+    print(train_data.isnull().sum().sort_values(ascending = False))
+
+
+    # ================== 1.4 Transform Location dataset ======================
+    # aggregate the location dataset
+    AGG_MAP = {'Confirmed': 'sum',
+               'Deaths': 'sum',
+               'Recovered': 'sum',
+               'Active': 'sum',
+               'Incidence_Rate': 'mean',
+               'Case-Fatality_Ratio': 'mean'
+               }
+    country_province_location_data = location_data.groupby(['province', 'country']).agg(AGG_MAP).reset_index()
+
+    train_data['Combined_Key'] = train_data.apply(lambda row: generate_combined_key(row), axis=1)
+    test_data['Combined_Key'] = test_data.apply(lambda row: generate_combined_key(row), axis=1)
+    country_province_location_data['Combined_Key'] = country_province_location_data.apply(
+        lambda row: generate_combined_key(row), axis=1)
+
+    LOCATION_DROP_COLUMNS = ["Lat", "Long_", "Last_Update"]
+
+
+
+    # =========================== 1.5 Joing cases and location dataset =====================
+
+    # join the two  dataset for train data
+    after_join1_train = pd.merge(train_data.drop(["province", "country"], axis=1),
+                                 country_province_location_data[country_province_location_data['province'].notnull()],
+                                 how='right', on=['Combined_Key'])
+    # use the rows without a province in location dataset
+    after_join2_train = pd.merge(train_data.drop(["province", "Combined_Key"], axis=1),
+                                 location_data[location_data['province'].isnull()].drop(LOCATION_DROP_COLUMNS, axis=1),
+                                 how='right', on=['country'])
+
+    after_join_train = pd.concat([after_join1_train, after_join2_train])
+    after_join_train.drop(["province"], axis=1, inplace=True)
+    after_join_train.dropna(subset=["outcome"], inplace=True)
+
+    after_join1_test = pd.merge(test_data.drop(["province", "country"], axis=1),
+                                country_province_location_data[country_province_location_data['province'].notnull()],
+                                how='right', on=['Combined_Key'])
+    after_join2_test = pd.merge(test_data.drop(["province", "Combined_Key"], axis=1),
+                                location_data[location_data['province'].isnull()].drop(LOCATION_DROP_COLUMNS, axis=1),
+                                how='right', on=['country'])
+
+    after_join_test = pd.concat([after_join1_test, after_join2_test])
+    after_join_test.drop(["province"], axis=1, inplace=True)
+    after_join_train.dropna(subset=["outcome"], inplace=True)
+
+
+    # Write result to csv file
+    after_join_train.to_csv(path_or_buf='../data/clean_cases_train.csv', index=False)
+    after_join_test.to_csv(path_or_buf='../data/clean_cases_test.csv', index=False)
+    location_data.to_csv(path_or_buf='../data/aggregated_location.csv', index=False)
+
 
 if __name__ == '__main__':
 
