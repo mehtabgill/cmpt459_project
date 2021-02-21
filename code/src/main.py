@@ -55,16 +55,25 @@ def perform_data_analysis_train():
     print("---- Dataset -> cases_train.csv --------------------")
     col_names, col_na = print_num_of_missing_vals(df)
 
+    print('---- Numerical attributes Statistics -------')
+    numerical_cols = ['latitude', 'longitude']
+    for col in numerical_cols:
+        print('For -> ', col)
+        print(df[col].describe())
+        print()
+
+    print('---------- Plotting graphs--------')
     plot_bargraph('Missing Values (cases_train)', 'Attributes', 'Total percentage of values missing', col_names, col_na)
     
     # plot countries v/s outcome for top 5 countries
     top_5_countries = df['country'].value_counts().nlargest(5).index
     country_df = df[df['country'].isin(top_5_countries)]
 
-    plot_countplot(country_df, 'Top 5 Countries_vs_Outcome', 'Countries', 'Outcome', x_attribute='country', hue='outcome')
-    plot_countplot(country_df, 'Top 5 Countries Frequency wise', 'Countries', 'Frequency', x_attribute='country')
+    plot_countplot(country_df, 'Top 5 Countries_vs_Outcome (cases_train)', 'Countries', 'Outcome', x_attribute='country', hue='outcome')
+    plot_countplot(country_df, 'Top 5 Countries Frequency wise (cases_train)', 'Countries', 'Frequency', x_attribute='country')
 
     # Plot Sex
+    plot_countplot(country_df, 'Sex Frequency (cases_train)', 'Sex', 'Frequency', x_attribute='sex')
     plot_countplot(country_df, 'Sex vs Outcome (cases_train)', 'Sex', 'Outcome', x_attribute='sex', hue='outcome')
 
     # combination of longitude and latitude
@@ -101,7 +110,15 @@ def perform_data_analysis_location():
     df = get_data_frame('location')
     print("---- Dataset -> location.csv --------------------")
     col_names, col_na = print_num_of_missing_vals(df)
+
+    numerical_cols = ['Lat', 'Long_', 'Confirmed', 'Deaths','Recovered','Active','Incidence_Rate','Case-Fatality_Ratio']
+    print('---- Numerical attributes Statistics -------')
+    for col in numerical_cols:
+        print('For -> ', col)
+        print(df[col].describe())
+        print()
     
+    print('---------- Plotting graphs--------')
     # Attribute missing values
     plot_bargraph('Missing Values (location)', 'Attributes', 'Total percentage of values missing', col_names, col_na)
 
@@ -188,8 +205,8 @@ def outlier_detection_elimination():
 
 if __name__ == '__main__':
 
-    perform_data_analysis_train()
+    # perform_data_analysis_train()
     perform_data_analysis_location()
 
-    outlier_detection_elimination()
+    # outlier_detection_elimination()
 
