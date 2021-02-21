@@ -303,4 +303,5 @@ if __name__ == '__main__':
     perform_data_analysis_location()
 
     outlier_detection_elimination()
+    preprocess()
 
