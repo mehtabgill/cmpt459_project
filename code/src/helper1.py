@@ -4,20 +4,64 @@ import numpy as np
 import random
 import json
 from urllib.request import urlopen
+from requests import get, post, HTTPError
+import http.client
+from requests_oauthlib import OAuth1
+import numpy as np
+import pandas as pd
 
-def getplace(lat, lon):
-    url = "http://maps.googleapis.com/maps/api/geocode/json?"
-    url += "latlng=%s,%s&sensor=false" % (lat, lon)
-    v = urlopen(url).read()
-    j = json.loads(v)
-    components = j['results'][0]['address_components']
-    country = town = None
-    for c in components:
-        if "country" in c['types']:
-            country = c['long_name']
-        if "postal_town" in c['types']:
-            town = c['long_name']
-    return town, country
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+
+def getplacehere(lat, lon):
+    url = "https://revgeocode.search.hereapi.com/v1/revgeocode?"
+    url += "at=%s,%s&lang=en-US" % (lat, lon)
+
+    clientId = "_D6emiCPSlTUF4em-90Bcw"
+    clientSecret = "Mc6o_3iosEwN9cxDVIOzRk0d2q4cucFL7ocarIjyGnQ9ddRxhWcIMFk6al3pO78NYSsgO7DjycZ6_I_-9pB8qg"
+    data = {
+        'grantType': 'client_credentials',
+        'clientId': clientId,
+        'clientSecret': clientSecret
+        }
+
+    response = post(
+        url='https://account.api.here.com/oauth2/token',
+        auth=OAuth1(clientId, client_secret=clientSecret) ,
+        headers={'Content-type': 'application/json'},
+        data=json.dumps(data)).json()
+
+    token, token_type, expire_in = None, None, None
+    try:
+        token = response['accessToken']
+        token_type = response['tokenType']
+        expire_in = response['expiresIn']
+    except KeyError as e:
+        print(json.dumps(response, indent=2))
+        exit(1)
+
+    headers = {'Authorization': f'{token_type} {token}'}
+    search_results = json.dumps(get(url, headers=headers).json(), indent=2)
+    # print(f'lat:\n{lat}')
+    # print(f'lon:\n{lon}')
+    # print(f'results:\n{search_results}')
+    # print("Debug: Trying to load json_result")
+    json_result = json.loads(search_results)
+
+    if len(json_result['items']) > 0:
+        # print("Debug: Executed")
+        # print(json_result['items'])
+        if 'state' in json_result['items'][0]['address']:
+            state_value = json_result['items'][0]['address']['state']
+            return state_value
+        else:
+            return np.nan
+    else:
+        return np.nan
+
+def get_province(row):
+    return getplacehere(row['latitude'], row['longitude'])
 
 def transform_age(s):
     age_str = str(s)
@@ -61,3 +105,57 @@ def generate_combined_key(row):
         return row['country']
     else:
         return str(row['province']) + ', ' + row['country']
+
+
+def plot_bargraph(title, x_label, y_label, x_attribute, y_attribute):
+    plt.subplots(figsize=(19, 10))
+    plt.title(title)
+    graph = sns.barplot(x=x_attribute, y=y_attribute)
+    graph.set(xlabel=x_label, ylabel=y_label)
+    plt.savefig('../plots/' + title + '.png')
+
+def plot_countplot(df, title, x_label, y_label, x_attribute, hue=None, hue_order=None, class_order=None, width=19, height=10):
+    plt.subplots(figsize=(width, height))
+    plt.title(title)
+    graph = ''
+    if hue != None:
+        graph = sns.countplot(data=df, x=x_attribute, hue=hue, hue_order = hue_order, order=class_order)
+    else:
+        graph = sns.countplot(data=df, x=x_attribute)
+    graph.set(xlabel=x_label, ylabel=y_label)
+    plt.savefig('../plots/' + title + '.png')
+
+def plot_scatterplot(df, title, x_label, y_label, column_x, column_y, ):
+    plt.subplots(figsize=(19, 10))
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.scatter(x=df[column_x], y=df[column_y])
+    plt.savefig('../plots/' + title + '.png')
+
+# Helper functions
+# get data frame by name, [train, test, location]
+def get_data_frame(name='train'):
+    if name == 'train':
+       return pd.read_csv('../data/cases_train.csv')
+    elif name == 'location':
+        return pd.read_csv('../data/location.csv')
+    elif name == 'test':
+        return pd.read_csv('../data/cases_test.csv')
+    elif name == 'clean train':
+        return pd.read_csv('../data/clean_cases_train.csv')
+    elif name == 'agg location':
+        return pd.read_csv('../data/aggregated_location.csv')
+    elif name == 'clean test':
+        return pd.read_csv('../data/clean_cases_test.csv')
+
+# prints missing values and returns list of columns and columns's missing value
+def print_num_of_missing_vals(df):
+    col_names = []
+    col_na = []
+    num_of_rows = len(df.index)
+    for column in df.columns:
+        col_names.append(column)
+        col_na.append((len(df[df[column].isnull()])/num_of_rows)*100)
+        print(column, " ", len(df[df[column].isnull()]))
+    return col_names, col_na
