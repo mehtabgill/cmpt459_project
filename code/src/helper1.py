@@ -143,11 +143,11 @@ def get_data_frame(name='train'):
     elif name == 'test':
         return pd.read_csv('../data/cases_test.csv')
     elif name == 'clean train':
-        return pd.read_csv('../data/clean_cases_train.csv')
+        return pd.read_csv('../results/cases_train_processed.csv')
     elif name == 'agg location':
-        return pd.read_csv('../data/aggregated_location.csv')
+        return pd.read_csv('../results/location_transformed.csv')
     elif name == 'clean test':
-        return pd.read_csv('../data/clean_cases_test.csv')
+        return pd.read_csv('../results/cases_test_processed.csv')
 
 # prints missing values and returns list of columns and columns's missing value
 def print_num_of_missing_vals(df):
