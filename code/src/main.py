@@ -193,8 +193,8 @@ def preprocess():
     print(train_data)
 
     # write cleaned data sets
-    train_data.to_csv(path_or_buf='../data/clean_cases_train.csv', index=False)
-    test_data.to_csv(path_or_buf='../data/clean_cases_test.csv', index=False)
+    train_data.to_csv(path_or_buf='../results/cases_train_processed.csv', index=False)
+    test_data.to_csv(path_or_buf='../results/cases_test_processed.csv', index=False)
     
     #set the province
     # train_data['province'] = train_data.apply(
@@ -226,8 +226,9 @@ def outlier_detection_elimination():
         upper_bound = q3 + (1.5*iqr)
         print('Lower and Upper bound -> ', lower_bound, upper_bound)
         temp_df = temp_df.loc[(temp_df[column] < 0.0) | (temp_df[column] > upper_bound)]
-        temp_df.to_csv('../data/outliers/'+column+'.csv')
-        print('------ Outliers saved to ---->  ./code/data/outliers/')
+        temp_df.to_csv('../results/outliers/'+column+'.csv')
+        print('--------- Box plots saved to -----> ./code/plots/outliers')
+        print('------ Outliers saved to ---->  ./code/results/outliers/')
 
 # =========================== 1.4 Location transformation =====================
 def transformation():
@@ -243,7 +244,7 @@ def transformation():
     country_province_location_data = location_data.groupby(['province', 'country']).agg(AGG_MAP).reset_index()
     country_province_location_data['Combined_Key'] = country_province_location_data.apply(
         lambda row: generate_combined_key(row), axis=1)
-    country_province_location_data.to_csv(path_or_buf='../data/aggregated_location.csv', index=False)
+    country_province_location_data.to_csv(path_or_buf='../results/location_transformed.csv', index=False)
 
 # =========================== 1.5 Joing cases and location dataset =====================
 def joining():
@@ -282,16 +283,17 @@ def joining():
 
 
     # Write result to csv file
-    after_join_train.to_csv(path_or_buf='../data/joined_cases_train.csv', index=False)
-    after_join_test.to_csv(path_or_buf='../data/joined_cases_test.csv', index=False)
-    location_data.to_csv(path_or_buf='../data/aggregated_location.csv', index=False)
-    print('joined data sets written to ./data/')
+    after_join_train.to_csv(path_or_buf='../results/joined_cases_train.csv', index=False)
+    after_join_test.to_csv(path_or_buf='../results/joined_cases_test.csv', index=False)
+    location_data.to_csv(path_or_buf='../results/location_final.csv', index=False)
+
+    print('joined data sets written to ./code/results/')
 
 if __name__ == '__main__':
 
     print('======== Performing 1.1 ================')
-    perform_data_analysis_train()
-    perform_data_analysis_location()
+    # perform_data_analysis_train()
+    # perform_data_analysis_location()
 
     print('======== Performing 1.2 ================')
     preprocess()
