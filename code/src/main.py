@@ -292,8 +292,8 @@ def joining():
 if __name__ == '__main__':
 
     print('======== Performing 1.1 ================')
-    # perform_data_analysis_train()
-    # perform_data_analysis_location()
+    perform_data_analysis_train()
+    perform_data_analysis_location()
 
     print('======== Performing 1.2 ================')
     preprocess()
