@@ -7,7 +7,11 @@ from urllib.request import urlopen
 from requests import get, post, HTTPError
 import http.client
 from requests_oauthlib import OAuth1
+import numpy as np
+import pandas as pd
 
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def getplacehere(lat, lon):
@@ -101,3 +105,57 @@ def generate_combined_key(row):
         return row['country']
     else:
         return str(row['province']) + ', ' + row['country']
+
+
+def plot_bargraph(title, x_label, y_label, x_attribute, y_attribute):
+    plt.subplots(figsize=(19, 10))
+    plt.title(title)
+    graph = sns.barplot(x=x_attribute, y=y_attribute)
+    graph.set(xlabel=x_label, ylabel=y_label)
+    plt.savefig('../plots/' + title + '.png')
+
+def plot_countplot(df, title, x_label, y_label, x_attribute, hue=None, hue_order=None, class_order=None, width=19, height=10):
+    plt.subplots(figsize=(width, height))
+    plt.title(title)
+    graph = ''
+    if hue != None:
+        graph = sns.countplot(data=df, x=x_attribute, hue=hue, hue_order = hue_order, order=class_order)
+    else:
+        graph = sns.countplot(data=df, x=x_attribute)
+    graph.set(xlabel=x_label, ylabel=y_label)
+    plt.savefig('../plots/' + title + '.png')
+
+def plot_scatterplot(df, title, x_label, y_label, column_x, column_y, ):
+    plt.subplots(figsize=(19, 10))
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.scatter(x=df[column_x], y=df[column_y])
+    plt.savefig('../plots/' + title + '.png')
+
+# Helper functions
+# get data frame by name, [train, test, location]
+def get_data_frame(name='train'):
+    if name == 'train':
+       return pd.read_csv('../data/cases_train.csv')
+    elif name == 'location':
+        return pd.read_csv('../data/location.csv')
+    elif name == 'test':
+        return pd.read_csv('../data/cases_test.csv')
+    elif name == 'clean train':
+        return pd.read_csv('../data/clean_cases_train.csv')
+    elif name == 'agg location':
+        return pd.read_csv('../data/aggregated_location.csv')
+    elif name == 'clean test':
+        return pd.read_csv('../data/clean_cases_test.csv')
+
+# prints missing values and returns list of columns and columns's missing value
+def print_num_of_missing_vals(df):
+    col_names = []
+    col_na = []
+    num_of_rows = len(df.index)
+    for column in df.columns:
+        col_names.append(column)
+        col_na.append((len(df[df[column].isnull()])/num_of_rows)*100)
+        print(column, " ", len(df[df[column].isnull()]))
+    return col_names, col_na
